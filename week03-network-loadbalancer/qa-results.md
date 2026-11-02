@@ -1,14 +1,33 @@
-# QA Test Results — Fill in with YOUR observed output
+# Week 03 - QA Test Results
 
-Run the included `bash test.sh` after `docker compose up --build -d`.
+## Test 1: Load Balancing - PASSED
+I sent 10 requests to the load balancer.
+- Backend 1 received 5 requests.
+- Backend 2 received 5 requests.
+- All requests returned HTTP 200.
+- Round-robin balancing worked correctly.
 
-| Test | Expected result | Actual result | Pass/Fail |
-|---|---|---|---|
-| Round-robin (10 requests) | Roughly 5 requests per backend | [fill in] | [fill in] |
-| Failover after stopping backend1 | 10 successful responses from backend2 | [fill in] | [fill in] |
-| Backend1 restored | Both backend IDs appear again | [fill in] | [fill in] |
-| Backend host isolation | Host `localhost:3000` cannot reach a backend | [fill in] | [fill in] |
-| Health endpoint | HTTP 200 at `localhost:8080/healthz` | [fill in] | [fill in] |
-| Browser DevTools | Successful requests; no unexpected errors | [fill in] | [fill in] |
+## Test 2: Failover - PASSED
+I stopped Backend 1.
+- Backend 2 continued responding.
+- The requests I tested returned HTTP 200.
+- I restarted Backend 1 successfully.
 
-Important caveat: Nginx retries *eligible* failed requests to another backend, but no system can promise zero dropped requests for all failure timings and HTTP request types. Document any errors you actually see.
+## Test 3: Backend Recovery - PASSED
+After restarting Backend 1, I tested again.
+- Both backends responded.
+- All 10 requests returned HTTP 200.
+
+## Test 4: Network Isolation - PASSED
+I attempted to connect directly to localhost:3000.
+- The connection was refused.
+- The backend was not exposed on that host port.
+
+## Test 5: Health Check - PASSED
+I tested http://localhost:8080/healthz.
+- The response was HTTP 200 OK.
+- Nginx successfully routed the request.
+
+## Conclusion
+The observed tests showed successful load balancing,
+backend failover, recovery, and basic network isolation.
