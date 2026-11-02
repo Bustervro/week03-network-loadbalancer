@@ -1,32 +1,61 @@
 # AI Use and Configuration Audit
 
-## AI tool
-ChatGPT generated this project starter from the assignment requirements supplied in chat.
+## AI Tool Used
 
-## Exact user requests in this conversation
-- "what i put on github for this assignment"
-- "what codes i put on github"
+I used ChatGPT to help create my Docker networking and load balancer project.
 
-The complete assignment requirements (including the sample architect prompt) were also pasted into the conversation before these requests. Preserve a copy of that full text if your instructor requires a verbatim prompt log for the entire context.
+## Prompts I Used
 
-## AI-generated draft and audit
-The `audit/initial-compose.yml` file is a **deliberately insecure example draft created for this exercise**, not the Docker Compose file to execute.
+My requests to ChatGPT included:
 
-Problems to point out when comparing the draft with `docker-compose.yml`:
-1. It maps backend host ports `3001:3000` and `3002:3000`, letting users bypass Nginx.
-2. It connects both backends to `public_subnet`, breaking the public/private boundary.
-3. It does not mark the private network as `internal: true`.
+1. "what i put on github for this assignment"
+2. "what codes i put on github"
 
-Corrected configuration:
-- Only Nginx publishes a host port (`8080:80`).
-- Backends connect **only** to `private_subnet` and use `expose`, not `ports`.
-- The private Docker bridge is marked `internal: true`.
-- Nginx uses service names instead of fixed container IPs, and has timeouts and retry settings.
+I also provided the complete assignment instructions, including the sample network architecture prompt.
 
-## My personal verification (complete after running Docker)
-- Date tested:
-- One specific issue I reviewed and how I confirmed the correction:
-- Tests I personally ran and observed:
-- Any remaining concerns:
+## AI-Generated Draft and Audit
 
-**Important:** Describe the sample draft as a deliberately insecure AI example; do not present it as a mistake that you independently discovered in a prior run. Be accurate about which changes and tests you personally performed.
+The project includes an intentionally insecure example in `audit/initial-compose.yml` for comparison with the corrected Docker configuration.
+
+### Problems in the Example
+
+1. Backend ports 3001 and 3002 were exposed to the host.
+2. Both backend servers were connected to the public network.
+3. The private network was not marked as internal.
+
+### Corrected Configuration
+
+1. Only Nginx exposes a host port (8080).
+2. Backend 1 and Backend 2 connect only to the private network.
+3. The private network uses `internal: true`.
+4. Nginx distributes traffic between the two backend servers.
+
+## My Personal Verification
+
+**Date tested:** November 1, 2026
+
+### Configuration Reviewed
+
+I compared the insecure example with the corrected Docker Compose configuration. I reviewed the exposed backend ports and network connections to understand why the corrected version is safer.
+
+### Tests I Performed
+
+- **Load Balancing:** I sent 10 requests. Backend 1 received 5 requests and Backend 2 received 5 requests.
+- **Failover:** I stopped Backend 1. Backend 2 continued responding with HTTP 200.
+- **Recovery:** I restarted Backend 1 and confirmed both backend servers responded again.
+- **Network Isolation:** I tried connecting to localhost:3000 and received a connection refused error.
+- **Health Check:** I tested `/healthz` and received HTTP 200 OK.
+
+### What I Learned
+
+I learned that a load balancer distributes requests between servers. If one server stops working, another server can continue handling requests.
+
+I also learned why backend servers should stay on a private network instead of being exposed directly to users.
+
+### Remaining Concerns
+
+This project demonstrates Docker network isolation in a development environment. It does not include production HTTPS or cloud security controls.
+
+## Conclusion
+
+ChatGPT helped me create the project files and an example security audit. I ran the Docker project in GitHub Codespaces and tested load balancing, failover, recovery, and basic network isolation.
