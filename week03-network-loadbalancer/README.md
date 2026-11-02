@@ -107,16 +107,16 @@ The full assignment text was also provided earlier in the chat, including its sa
 
 **AI audit example:** `audit/initial-compose.yml` is an **intentionally insecure AI-created draft for comparison**, not a file to run. It publishes host ports 3001/3002 for the backends and connects them to the public network. In the corrected `docker-compose.yml`, both backends are private-only, no backend ports are published, and `private_subnet` has `internal: true`. Nginx is the only public entry point. Confirm these details yourself and explain what you personally checked in the video.
 
-## QA summary (update after your real Docker test)
+## QA Summary (Test Results)
 
-| Check | Expected | Actual result |
+| Check | Expected | Actual Result |
 |---|---|---|
-| 10 round-robin HTTP requests | About 5 responses per backend | [fill in] |
-| One backend stopped | Successful requests handled by surviving backend | [fill in] |
-| Backend restarted | Both servers appear again | [fill in] |
-| Host request to backend port | Direct backend access blocked | [fill in] |
-| `/healthz` through Nginx | HTTP 200 | [fill in] |
-| Browser Network/Console | No unexpected errors | [fill in] |
+| 10 round-robin HTTP requests | About 5 responses per backend | PASSED - Backend 1: 5, Backend 2: 5 |
+| One backend stopped | Successful requests handled by surviving backend | PASSED - Backend 2 returned HTTP 200 |
+| Backend restarted | Both servers appear again | PASSED - Both servers responded |
+| Host request to backend port | Direct backend access blocked | PASSED - Connection refused |
+| /healthz through Nginx | HTTP 200 | PASSED - HTTP 200 OK |
+| Browser Network/Console | No unexpected errors | NOT TESTED YET |
 
 See `qa-results.md` for a more complete table and notes. Do not claim Docker tests were passed until you run them yourself.
 
