@@ -1,24 +1,18 @@
-# INSECURE AI DRAFT FOR REVIEW ONLY. DO NOT RUN THIS FILE.
-# Audit issue: The backends publish host ports and join the public network.
+# INTENTIONALLY INSECURE AI EXAMPLE FOR REVIEW ONLY — DO NOT EXECUTE.
 services:
   nginx:
     image: nginx:stable-alpine
-    ports:
-      - "8080:80"
-    volumes:
-      - ../nginx.conf:/etc/nginx/nginx.conf:ro
+    ports: ["8080:80"]
+    volumes: ["../nginx.conf:/etc/nginx/nginx.conf:ro"]
     networks: [public_subnet, private_subnet]
-
   backend1:
     build: ..
-    ports: ["3001:3000"]  # ERROR: backend accessible directly from host
-    networks: [public_subnet, private_subnet]  # ERROR: backend on public subnet
-
+    ports: ["3001:3000"] # INSECURE: bypasses the load balancer
+    networks: [public_subnet, private_subnet] # INSECURE: public attached
   backend2:
     build: ..
-    ports: ["3002:3000"]  # ERROR: backend accessible directly from host
-    networks: [public_subnet, private_subnet]  # ERROR: backend on public subnet
-
+    ports: ["3002:3000"] # INSECURE: bypasses the load balancer
+    networks: [public_subnet, private_subnet] # INSECURE: public attached
 networks:
   public_subnet: {driver: bridge}
-  private_subnet: {driver: bridge}
+  private_subnet: {driver: bridge} # INSECURE: missing internal: true

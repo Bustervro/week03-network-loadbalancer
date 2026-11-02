@@ -1,134 +1,98 @@
-# Week 03: Docker Network Segmentation and Load Balancing
+# Week 03 — Docker Network Segmentation and Load Balancing
 
-A learning project that uses an Nginx reverse proxy to distribute HTTP requests between two Python web servers. **Only Nginx publishes a host port; the backends run on an internal Docker network.**
+This is a **development demonstration** of two private Python backends behind an Nginx round-robin load balancer. A public Docker bridge reaches Nginx on port 8080; backend ports are *not* published on the host. The private Docker bridge is marked `internal: true`.
 
-## Network diagram
+## Architecture diagram
 
 ```text
-      Browser / curl
-       localhost:8080
-             |
-  public_subnet (172.30.10.0/24)
-             |
-    +-----------------+
-    |  Nginx          |  <-- attached to BOTH networks
-    |  port 80        |
-    |  round-robin LB |
-    +-----------------+
-         /       \
-  private_subnet (172.30.20.0/24, internal)
-       /             \
-  backend1:3000   backend2:3000
-  (private only)  (private only)
+Browser / curl at localhost:8080
+               |
+  public_subnet 172.30.10.0/24
+               |
+       +---------------+
+       | Nginx :80     |  <-- only published host port: 8080:80
+       | Round-robin   |      connected to BOTH networks
+       +---------------+
+             /    \
+  private_subnet 172.30.20.0/24 (internal: true)
+           /          \
+    backend1:3000    backend2:3000
+     (private)        (private)
 ```
 
-These are Docker bridge networks for a **local demo**; they do not automatically implement cloud VPC subnet security groups or internet-ready TLS. The sample CIDR ranges may need changing if they conflict with your local network.
+The `public_subnet` and `private_subnet` are Docker bridge networks, not a production cloud VPC. The subnet CIDRs are explicitly set; change them if they collide with your existing networks. This demo terminates plain HTTP on port 8080; production systems require HTTPS and additional hardening.
 
 ## Files
 
-- `docker-compose.yml`: public and private networks, Nginx, two Python backends.
-- `nginx.conf`: round-robin upstream, timeouts, failover retries, logs.
-- `app.py`: simple JSON response with unique backend ID and `/healthz`.
-- `Dockerfile`: Python container build.
-- `audit/initial-compose.yml`: intentionally insecure AI example for the configuration audit; **do not run it**.
-- `ai-prompts.md`: actual AI requests, example audit, and your verification notes.
-- `qa-results.md`: QA results table to complete using real output.
-- `test.sh`: commands to exercise balancing, failover, and host isolation.
+- `docker-compose.yml` — networks, Nginx, two isolated backends and health checks
+- `nginx.conf` — round-robin upstream pool, retry/timeouts and logs
+- `app.py`, `Dockerfile` — tiny Python JSON HTTP server, `/healthz` and a favicon 204 response
+- `qa_test.py` / `test.sh` — repeatable automated checks; writes `qa-evidence.txt`, `qa-report.json`
+- `qa-results.md` — *actual observed tests* and explicitly outstanding checks
+- `ai-prompts.md` — AI disclosure and comparison with intentionally insecure example `audit/initial-compose.yml`
+- `VIDEO_SCRIPT.md` — six-minute recording guide
+- `../.github/workflows/qa.yml` — GitHub Actions CI to run Docker tests without Codespaces
 
-## Requirements
+## Run in Docker (locally or Codespaces)
 
-Install Docker Desktop (or Docker Engine with Docker Compose) and curl. GitHub alone will store the code but will not run this local Docker project.
-
-## Start and inspect
+From **this project's folder**:
 
 ```bash
 docker compose up --build -d
 docker compose ps
 curl -i http://localhost:8080/healthz
-```
-
-Visit http://localhost:8080 and refresh. The response's `server` field tells you whether backend1 or backend2 served the request.
-
-## Load distribution
-
-```bash
-for i in $(seq 1 10); do curl -s http://localhost:8080/; echo; done
-```
-
-Expect roughly five responses from each backend if both are healthy. Nginx's default upstream policy is round-robin.
-
-## Failover and recovery
-
-```bash
-docker compose stop backend1
-for i in $(seq 1 10); do curl -i http://localhost:8080/; done
-docker compose start backend1
-sleep 6
-for i in $(seq 1 10); do curl -s http://localhost:8080/; echo; done
-```
-
-Look for only backend2 during the stopped phase, followed by both servers after recovery. Nginx retries eligible requests, reducing outages, but results depend on failure timing and request type; record real responses instead of claiming guaranteed zero dropped requests.
-
-## Network isolation (negative test)
-
-```bash
-curl --max-time 2 http://localhost:3000/
-docker compose ps
-docker compose logs --tail=30 nginx
-```
-
-The direct `localhost:3000` request should fail because neither backend publishes a host port. Note that a different program on your host might be listening on that port; use `docker compose ps` to verify Docker-published ports. From the host, only Nginx is published at port 8080.
-
-## Run the walkthrough test
-
-```bash
 bash test.sh
-```
-
-Fill in `qa-results.md` with the actual results, and inspect your browser DevTools Network/Console tabs.
-
-## Cleanup
-
-```bash
+docker compose logs --tail=25 nginx
 docker compose down
 ```
 
-If you recreate backend containers and their IPs change, restart Nginx (`docker compose restart nginx`) so its service-name upstreams are resolved again. Stopping and starting the same existing backend container should retain its IP.
+The script checks ten requests across both backends (5 + 5), stops `backend1` and verifies ten requests go to `backend2`, restarts the backend and verifies recovery, checks the host port boundary and health endpoint. It reports real failures instead of claiming success unconditionally. Logs and reports are generated in the working directory. It does **not** promise zero dropped requests for arbitrary timing or methods.
 
-## AI disclosure, exact prompt appendix, and audit
+The Nginx upstream resolves Docker names at startup. If you **recreate** backend containers and change their internal IPs, run `docker compose restart nginx`. Restarting a stopped *existing* backend should keep its IP.
 
-**AI tool:** ChatGPT. The actual short user requests that led to this code were:
+## Run checks without Codespaces (GitHub Actions)
 
-> what i put on github for this assignment
->
-> what codes i put on github
+Go to the repository **Actions → Docker QA → Run workflow**. The workflow runs `docker compose up --build -d`, executes `qa_test.py`, and saves a `qa-evidence` artifact. When it completes, inspect the workflow logs; a green check appears only if the automated checks pass. **Do not write “passed in GitHub Actions” until you see a green run.**
 
-The full assignment text was also provided earlier in the chat, including its sample initial architect prompt. For an exact record of *all* prompt context, include that full pasted assignment or record your future prompts verbatim in `ai-prompts.md`.
+## AI use and security audit
 
-**AI audit example:** `audit/initial-compose.yml` is an **intentionally insecure AI-created draft for comparison**, not a file to run. It publishes host ports 3001/3002 for the backends and connects them to the public network. In the corrected `docker-compose.yml`, both backends are private-only, no backend ports are published, and `private_subnet` has `internal: true`. Nginx is the only public entry point. Confirm these details yourself and explain what you personally checked in the video.
+I used ChatGPT to generate a starter project and explain deployment/testing. Exact short requests and the teacher-provided sample architecture prompt are recorded in [`ai-prompts.md`](ai-prompts.md). The `audit/initial-compose.yml` file is a **deliberately insecure comparison example**; I did not independently discover it as an accidental original error.
 
-## QA Summary (Test Results)
-
-| Check | Expected | Actual Result |
+| Review item | Insecure audit example | Corrected project |
 |---|---|---|
-| 10 round-robin HTTP requests | About 5 responses per backend | PASSED - Backend 1: 5, Backend 2: 5 |
-| One backend stopped | Successful requests handled by surviving backend | PASSED - Backend 2 returned HTTP 200 |
-| Backend restarted | Both servers appear again | PASSED - Both servers responded |
-| Host request to backend port | Direct backend access blocked | PASSED - Connection refused |
-| /healthz through Nginx | HTTP 200 | PASSED - HTTP 200 OK |
-| Browser Network/Console | No unexpected errors | NOT TESTED YET |
+| Backend host ports | 3001:3000 and 3002:3000 published | No backend `ports` mappings |
+| Backend networks | Public and private | Private only |
+| Private bridge internal | Not configured | `internal: true` |
+| Load balancing | Not validated | Nginx default round robin, retry on eligible failures |
 
-See `qa-results.md` for a more complete table and notes. Do not claim Docker tests were passed until you run them yourself.
+## QA result summary (observed earlier in Codespaces)
 
-## Video walkthrough (5–7 minutes)
+| Test | Result | Evidence |
+|---|---|---|
+| 10 requests across two backends | **PASS — 5 backend1, 5 backend2**, all HTTP 200 | Terminal screenshots from Nov 1 Pacific |
+| Stop backend1 | **PASS — observed requests from backend2**, HTTP 200 | Terminal screenshot |
+| Restart backend1 | **PASS — both appeared again**, 10 responses HTTP 200 | Terminal screenshot |
+| Host direct request `localhost:3000` | **PASS — connection refused** | Terminal screenshot; use `docker compose ps` to confirm mappings |
+| `/healthz` via Nginx | **PASS — HTTP 200** | Terminal screenshot |
+| Browser Network tab and Console | **PARTIAL — browser app responds, DevTools console not fully verified** | Needs manual browser check |
 
-1. 0:00–1:30 — diagram and insecure draft versus corrected Compose.
-2. 1:30–3:00 — run and send 10 requests.
-3. 3:00–5:00 — stop backend1, test traffic, test isolation, restart it, show logs.
-4. 5:00–6:30 — explain Nginx, subnet segmentation, and lessons learned.
+See [`qa-results.md`](qa-results.md) for details. Browser's earlier `/favicon.ico` 404 was a cosmetic missing-icon request; the **revised** backend now responds with 204, which still requires re-testing after deployment.
+
+## Browser check (manual)
+
+Open forwarded port 8080 in the browser (or `http://localhost:8080` locally). On the **JSON page** (not the Codespaces editor), open DevTools (F12) → Network → All → refresh. Check the main `/` request is HTTP 200, then check Console for unexpected errors. Update the status above and in `qa-results.md` with what you actually observe.
 
 ## Submission links
 
-- GitHub repository: [add link]
-- Video recording: [add link]
-- Live demo URL: N/A — Local Docker Topology
+- **GitHub:** https://github.com/Bustervro/week03-network-loadbalancer
+- **Live demo URL:** N/A — Docker/Codespaces development topology (not a persistent public deployment)
+- **Video:** **ADD THE REAL UNLISTED/PUBLIC VIDEO URL AFTER RECORDING**
+
+## Video timestamps (planned; adjust after recording)
+
+- 0:00 — Diagram, public vs private networks, AI draft/config audit
+- 1:30 — Running containers and ten-request balancing test
+- 3:00 — Failover, restart and isolation checks
+- 5:00 — Browser health check and takeaways
+
+A video with both **webcam/face and screen** is required. The optional GitHub Actions test run does **not** replace the video.

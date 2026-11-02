@@ -9,6 +9,11 @@ PORT = int(os.getenv("PORT", "3000"))
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = self.path.split("?", 1)[0]
+        if path == "/favicon.ico":
+            self.send_response(204)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if path not in ("/", "/healthz"):
             self.send_json({"error": "Not found", "server": SERVER_ID}, 404)
             return
