@@ -1,25 +1,32 @@
-# AI Use and Configuration Audit
+# Week 03 – AI Use, Prompt Log, and Configuration Audit
 
 ## 1. AI Tool Used
 
-I used ChatGPT to help me create my Week 03 Docker Network Segmentation and Load Balancing project.
+**AI Tool:** ChatGPT (OpenAI)
 
-ChatGPT helped me generate Docker configuration files, Nginx load balancing settings, backend application code, and testing instructions.
+**Project:** Docker Network Segmentation and Load Balancing
 
-I used GitHub to store my project and GitHub Codespaces to run and test it.
+I used ChatGPT to help me create my Docker networking and load balancer project. ChatGPT helped generate the Docker Compose configuration, Nginx settings, Python backend application, README documentation, and testing instructions.
 
-## 2. Exact ChatGPT Requests
+I used GitHub to store my code and GitHub Codespaces to run and test the project.
 
-These are the original requests I submitted to ChatGPT:
+## 2. My Actual ChatGPT Requests
 
-1. "what i put on github for this assignment"
-2. "what codes i put on github"
+These are the exact short requests I submitted to ChatGPT when creating my project:
 
-I also pasted the full assignment instructions into ChatGPT, including the instructor's sample architecture prompt.
+**Prompt 1:**
+> what i put on github for this assignment
+
+**Prompt 2:**
+> what codes i put on github
+
+Before these requests, I pasted the complete Week 03 assignment instructions into ChatGPT, including the instructor's sample network architecture prompt.
+
+I also asked ChatGPT for help uploading the files, running the tests, and documenting the results.
 
 ## 3. Original Assignment Sample Prompt
 
-**Source:** This prompt was included in the original assignment instructions I provided to ChatGPT. It was not submitted separately as a standalone request.
+**Source:** This prompt was included in the assignment instructions that I pasted into ChatGPT. It was not sent separately as a standalone prompt.
 
 Act as a senior network systems architect. I need a multi-container network topology configured using Docker Compose (or Terraform/Cloud IaC) demonstrating isolated subnets and reverse-proxy load balancing for a web application.
 
@@ -44,54 +51,78 @@ The architecture must include:
 
 Provide the Docker Compose file, the load balancer configuration file (e.g., `nginx.conf`), the minimal backend application code, and step-by-step instructions to run and test it.
 
-## 4. AI-Generated Draft and Configuration Audit
+## 4. AI-Generated Project
 
-ChatGPT helped generate an initial project and an intentionally insecure example configuration saved in `audit/initial-compose.yml`.
+ChatGPT helped generate the following project files:
 
-I used this insecure example to understand and compare network configuration problems with the corrected `docker-compose.yml` file.
+- `docker-compose.yml` – Creates two networks, two backend servers, and Nginx.
+- `nginx.conf` – Configures round-robin load balancing.
+- `app.py` – Creates the Python backend application.
+- `Dockerfile` – Builds the backend containers.
+- `README.md` – Explains the project and how to run it.
+- `qa-results.md` – Documents my testing results.
+- `test.sh` – Provides testing commands.
+- `audit/initial-compose.yml` – Provides an intentionally insecure example for comparing network configurations.
 
-### Security Problems in the Example
+## 5. AI Configuration Audit
 
-**Problem 1: Backend Ports Exposed**
+I reviewed the intentionally insecure example in `audit/initial-compose.yml` and compared it with the corrected `docker-compose.yml`.
 
-The insecure example exposed backend ports 3001 and 3002 directly to the host.
+The insecure example was generated as a learning exercise. It was not an accidental AI error I discovered in an earlier working deployment.
 
-This could let users access backend servers without going through Nginx.
+### Problem 1: Exposed Backend Ports
 
-**Problem 2: Incorrect Network Connections**
+The insecure example used host ports `3001:3000` and `3002:3000`.
 
-Both backend servers were connected to the public network.
+**Why this is a problem:**
 
-Backend servers should connect only to the private network.
+Users could connect directly to the backend servers without passing through the load balancer.
 
-**Problem 3: Missing Private Network Protection**
+**Corrected configuration:**
+
+Only Nginx publishes a host port (`8080:80`). Backend servers use internal container ports.
+
+### Problem 2: Incorrect Network Connections
+
+The insecure example connected both backend servers to the public network.
+
+**Why this is a problem:**
+
+Backend application servers should not be directly connected to the public network.
+
+**Corrected configuration:**
+
+Backend 1 and Backend 2 connect only to `private_subnet`. Nginx connects to both public and private networks.
+
+### Problem 3: Missing Private Network Isolation
 
 The insecure example did not mark the private network as internal.
 
-### Corrected Configuration
+**Corrected configuration:**
 
-The working project includes these security improvements:
+The corrected Docker Compose configuration uses `internal: true` for the private network.
 
-1. Only Nginx publishes a host port (`8080:80`).
-2. Backend 1 and Backend 2 connect only to `private_subnet`.
-3. The private Docker network uses `internal: true`.
-4. Nginx connects to both public and private networks.
-5. Nginx uses Docker service names instead of fixed backend IP addresses.
-6. Nginx distributes traffic using round-robin load balancing and includes timeout and retry settings.
+### Problem 4: Load Balancer Verification
 
-The insecure configuration was deliberately provided as an audit example. It was not an accidental issue I independently discovered while running an earlier version.
+I reviewed the Nginx configuration to understand how requests are distributed between backend servers.
 
-## 5. My Personal Verification
+The working project uses service names instead of hardcoded backend IP addresses and includes timeout and retry settings.
 
-**Date tested:** November 1, 2026 (Pacific Time)
+The load balancer uses round-robin distribution, which sends requests between available backend servers.
 
-**Testing environment:** GitHub Codespaces using Docker Compose.
+## 6. My Personal Verification and Testing
 
-I ran the application and checked whether the load balancer and private backend servers worked correctly.
+**Date Tested:** November 1, 2026
 
-### Test 1: Load Balancing — PASSED
+**Testing Environment:** GitHub Codespaces with Docker Compose
 
-I sent 10 HTTP requests through Nginx.
+I ran the project through GitHub Codespaces and used the terminal to check the application's functionality.
+
+### Test 1: Load Balancing – PASSED
+
+I used this command:
+
+`for i in {1..10}; do curl -sS -w ' HTTP %{http_code}\n' http://localhost:8080/; done`
 
 **Results:**
 
@@ -100,74 +131,32 @@ I sent 10 HTTP requests through Nginx.
 - All 10 requests returned HTTP 200.
 - Round-robin load balancing worked correctly.
 
-### Test 2: Failover — PASSED
+### Test 2: Failover – PASSED
 
-I stopped Backend 1 using Docker Compose.
+I stopped Backend 1 using:
+
+`docker compose stop backend1`
+
+Then I sent requests through Nginx.
 
 **Results:**
 
-- Backend 2 continued responding to requests.
-- The failover test returned HTTP 200 responses.
-- The application continued working during the observed test.
+- Backend 2 continued responding.
+- The observed requests returned HTTP 200.
+- The remaining backend handled the tested traffic.
 
-### Test 3: Backend Recovery — PASSED
+### Test 3: Backend Recovery – PASSED
 
-I restarted Backend 1 and tested again.
+I restarted Backend 1 using:
+
+`docker compose start backend1`
+
+Then I repeated the request test.
 
 **Results:**
 
 - Backend 1 returned to service.
-- Both backend servers handled requests again.
+- Both backend servers received requests.
 - All 10 requests returned HTTP 200.
 
-### Test 4: Network Isolation — PASSED
-
-I attempted to connect directly to `localhost:3000`.
-
-**Results:**
-
-- The connection was refused.
-- The backend was not published on that host port.
-- The project was configured so external requests go through Nginx.
-
-### Test 5: Health Check — PASSED
-
-I tested `http://localhost:8080/healthz`.
-
-**Results:**
-
-- The endpoint returned HTTP 200 OK.
-- Nginx successfully forwarded the request.
-- The backend returned a healthy response.
-
-### Test 6: Browser Console and Network Tab — NOT YET VERIFIED
-
-I still need to inspect the browser Developer Tools Network and Console tabs to confirm there are no unexpected browser or gateway errors.
-
-## 6. What I Learned
-
-I learned that a load balancer helps distribute traffic between different servers.
-
-I also learned that when one backend server stops working, another server can continue responding to requests.
-
-Keeping backend servers on a private network helps protect them from direct external access.
-
-Using Docker and GitHub Codespaces helped me understand how applications and networks work together.
-
-## 7. Remaining Limitations
-
-This project demonstrates local Docker networking and basic load balancing.
-
-It does not include production HTTPS, cloud security groups, or a fully production-ready high-availability setup.
-
-The observed tests show that the application worked under the conditions I tested, but they do not guarantee that every request will succeed during all possible failures.
-
-## 8. Conclusion
-
-ChatGPT helped me generate the project files and an example configuration audit.
-
-I reviewed the network setup and used GitHub Codespaces to run the project.
-
-My testing demonstrated successful round-robin load balancing, backend failover, recovery, health checks, and basic network isolation.
-
-This assignment helped me understand why applications need load balancers and protected private networks.
+### Test 4: Network Isolation – PAS
