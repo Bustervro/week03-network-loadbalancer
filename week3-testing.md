@@ -1,50 +1,65 @@
-Week 3 – Load Balancer Testing
 
-Project
+# Week 3 – Load Balancer Testing
 
+## Project
 Docker Network Load Balancer
 
-Goal
+## Goal
+This week, I tested my Nginx load balancer to see if it works correctly with two Python backend servers. I used GitHub Actions to run the tests without installing Docker on my computer.
 
-This week, I will test my Nginx load balancer to see if it works correctly with two Python backend servers.
+## Test 1: Health Check
+I tested whether the application was running correctly.
 
-Test 1: Health Check
-
-Run:
+Command:
+```bash
 curl -i http://localhost:8080/healthz
+```
 
-Expected result: HTTP 200 if the service is healthy.
+Expected Result: HTTP 200 OK.
 
-Test 2: Load Balancing
+Actual Result: HTTP 200 OK.
 
-Send 10 requests to the load balancer.
+Status: PASSED
 
-Expected result: Both backend servers receive requests.
+## Test 2: Load Balancing
+I sent 10 requests to the Nginx load balancer.
 
-Test 3: Network Security
+Expected Result: Both Python backend servers receive requests.
 
-Check that the Python backend servers are not directly exposed to the host.
+Actual Result:
+- Backend 1 received 5 requests.
+- Backend 2 received 5 requests.
 
-Expected result: Only Nginx publishes the application’s host port.
+Status: PASSED
 
-Test Results
+## Test 3: Network Security
+I checked whether the Python backend servers were directly exposed to the host.
 
-Key Learnings
+Expected Result: Only Nginx publishes the application's host port.
 
-I am learning how to test server health, request distribution, and network security.
+Actual Result:
+- Nginx publishes port 8080.
+- Backend 1 has no published host port.
+- Backend 2 has no published host port.
+- Both backend servers were healthy.
 
-Next Steps
-
-Run the tests, record the actual results, and improve the system if problems are found.
-
-Health Check: PASSED — HTTP 200 OK.
-Load Balancing: PASSED — Backend 1 received 5 requests and Backend 2 received 5 requests.
-Network Security: Pending verification.
+Status: PASSED
 
 ## Test Results
-
-- Health Check: PASSED — HTTP 200 OK.
-- Load Balancing: PASSED — Backend 1 received 5 requests and Backend 2 received 5 requests.
-- Network Security: PASSED — Only Nginx publishes port 8080. Both Python backends have no published host ports.
+- Health Check: PASSED
+- Load Balancing: PASSED
+- Network Security: PASSED
 
 All three tests passed using GitHub Actions.
+
+## Key Learnings
+I learned how to test server health, load balancing, and network security. I also learned how to use GitHub Actions to run Docker tests automatically.
+
+## Progress Summary
+This week, I created a testing plan and tested my Nginx load balancer. All three tests passed. I confirmed that both Python backend servers received requests and that only Nginx published a host port.
+
+## Next Steps
+My next step is to save screenshots of my test results, update my pull request, and submit my Week 3 development update.
+
+## Testing Evidence
+The GitHub Actions workflow completed successfully. Screenshots of the health check, load balancing results, and container port configuration can be used as testing evidence.
