@@ -40,3 +40,11 @@ Run the tests, record the actual results, and improve the system if problems are
 Health Check: PASSED — HTTP 200 OK.
 Load Balancing: PASSED — Backend 1 received 5 requests and Backend 2 received 5 requests.
 Network Security: Pending verification.
+
+## Test Results
+
+- Health Check: PASSED — HTTP 200 OK.
+- Load Balancing: PASSED — Backend 1 received 5 requests and Backend 2 received 5 requests.
+- Network Security: PASSED — Only Nginx publishes port 8080. Both Python backends have no published host ports.
+
+All three tests passed using GitHub Actions.
