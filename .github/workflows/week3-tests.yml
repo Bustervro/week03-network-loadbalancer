@@ -39,6 +39,8 @@ jobs:
 
       - name: Show containers and logs
         if: always()
+        working-directory: ${{ steps.project.outputs.dir }}
         run: |
-          docker compose ps || true
-          docker compose logs --tail=50 || true
+          docker compose ps
+          docker compose logs --tail=50
+
