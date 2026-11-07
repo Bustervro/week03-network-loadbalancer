@@ -29,10 +29,6 @@ Expected result: Only Nginx publishes the application’s host port.
 
 Test Results
 
-* Health Check: Not tested yet
-* Load Balancing: Not tested yet
-* Network Security: Not tested yet
-
 Key Learnings
 
 I am learning how to test server health, request distribution, and network security.
@@ -40,3 +36,7 @@ I am learning how to test server health, request distribution, and network secur
 Next Steps
 
 Run the tests, record the actual results, and improve the system if problems are found.
+
+Health Check: PASSED — HTTP 200 OK.
+Load Balancing: PASSED — Backend 1 received 5 requests and Backend 2 received 5 requests.
+Network Security: Pending verification.
