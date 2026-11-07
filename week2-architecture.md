@@ -69,3 +69,5 @@ ChatGPT helped organize this architecture review. I based the description on the
 - [ ] Screenshot of current Docker Compose file / service definitions
 - [ ] Link to the Week 2 issue, if required by the course
 - [ ] Link to my Week 2 branch and draft pull request, once created
+
+Week 2 update: Reviewed the Nginx load balancer architecture and documented its components, strengths, and limitations.
