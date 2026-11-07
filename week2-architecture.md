@@ -71,3 +71,7 @@ ChatGPT helped organize this architecture review. I based the description on the
 - [ ] Link to my Week 2 branch and draft pull request, once created
 
 Week 2 update: Reviewed the Nginx load balancer architecture and documented its components, strengths, and limitations.
+
+## Week 2 Architecture Improvement
+
+The system uses Nginx to send requests to two Python backend servers. The backends should remain on the private Docker network. My next step is to check the Docker Compose configuration and test how requests are distributed.
