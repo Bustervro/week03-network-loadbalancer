@@ -1,0 +1,46 @@
+
+name: Week 3 Docker Tests
+
+on:
+  push:
+    branches: [week3-testing]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get project files
+        uses: actions/checkout@v4
+
+      - name: Find Docker Compose file
+        id: project
+        run: |
+          FILE=$(find . -type f \( -name 'docker-compose.yml' -o -name 'docker-compose.yaml' -o -name 'compose.yml' -o -name 'compose.yaml' \) | head -n 1)
+          if [ -z "$FILE" ]; then
+            echo "Docker Compose file not found"
+            exit 1
+          fi
+          echo "dir=$(dirname "$FILE")" >> "$GITHUB_OUTPUT"
+
+      - name: Start application
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: docker compose up --build -d
+
+      - name: Test health check
+        run: |
+          curl --fail --retry 15 --retry-delay 2 --retry-connrefused -i http://localhost:8080/healthz
+
+      - name: Send 10 requests
+        run: |
+          for i in {1..10}; do
+            curl -sS http://localhost:8080/healthz
+            echo
+          done
+
+      - name: Show containers and logs
+        if: always()
+        working-directory: ${{ steps.project.outputs.dir }}
+        run: |
+          docker compose ps
+          docker compose logs --tail=50
+
